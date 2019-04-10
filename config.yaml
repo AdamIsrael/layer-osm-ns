@@ -1,0 +1,9 @@
+options:
+  juju-username:
+    type: string
+    default: ""
+    description: "The Juju username to authenticate with."
+  juju-password:
+    type: string
+    default: ""
+    description: "The Juju password to authenticate with."

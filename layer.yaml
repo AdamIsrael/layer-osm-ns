@@ -1,0 +1,11 @@
+includes:
+  - 'layer:basic'
+options:
+  basic:
+    # packages:
+    #   - 'python3-dev'
+    #   - 'python-dev'
+    #   - 'libpython3.6-dev'
+    #   - 'libpython3.7-dev'
+    #   - 'python3-cffi'
+    use_venv: false
