@@ -2,7 +2,7 @@
 # OSM Network Service charms
 
 # This class handles the heavy lifting associated with asyncio.
-from charmhelpers.contrib.python.packages import pip_install
+from charmhelpers.fetch.python.packages import pip_install
 from charmhelpers.core.hookenv import (
     log,
 )
