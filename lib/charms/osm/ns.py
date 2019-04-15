@@ -16,17 +16,9 @@ import asyncio
 import logging
 from juju.controller import Controller
 import os
+import os.path
 import time
-
-import ssl
-# Allow unverified SSL connection to the Juju controller
-try:
-    ssl._create_default_https_context = ssl._create_unverified_context
-except AttributeError:
-    # Legacy Python doesn't verify by default (see pep-0476)
-    #   https://www.python.org/dev/peps/pep-0476/
-    pass
-
+import yaml
 
 # Quiet the debug logging
 logging.getLogger('websockets.protocol').setLevel(logging.INFO)
@@ -49,6 +41,7 @@ class NetworkService:
     loop = None
     client = None
     model = None
+    cacert = None
 
     def __init__(self, user, secret, endpoint=None):
 
@@ -64,13 +57,24 @@ class NetworkService:
         # Stash the name of the model
         self.model = os.environ['JUJU_MODEL_NAME']
 
+        # self.cacert = cacert
+
+        # Load the ca-cert from agent.conf
+        AGENT_PATH = os.path.dirname(os.environ['JUJU_CHARM_DIR'])
+        with open("{}/agent.conf".format(AGENT_PATH), "r") as f:
+            try:
+                y = yaml.safe_load(f)
+                self.cacert = y['cacert']
+            except yaml.YAMLError as exc:
+                log("Unable to find Juju ca-cert.")
+                raise exc
+
         # Create our event loop
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
 
     async def connect(self):
-        """asdf"""
-        cacert = None
+        """Connect to the Juju controller."""
         controller = Controller()
 
         log(
@@ -85,7 +89,7 @@ class NetworkService:
             endpoint=self.endpoint,
             username=self.user,
             password=self.secret,
-            cacert=cacert,
+            cacert=self.cacert,
         )
 
         return controller
