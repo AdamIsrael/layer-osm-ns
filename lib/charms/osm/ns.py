@@ -17,6 +17,7 @@ import logging
 from juju.controller import Controller
 import os
 import os.path
+import re
 import time
 import yaml
 
@@ -57,8 +58,6 @@ class NetworkService:
         # Stash the name of the model
         self.model = os.environ['JUJU_MODEL_NAME']
 
-        # self.cacert = cacert
-
         # Load the ca-cert from agent.conf
         AGENT_PATH = os.path.dirname(os.environ['JUJU_CHARM_DIR'])
         with open("{}/agent.conf".format(AGENT_PATH), "r") as f:
@@ -82,7 +81,7 @@ class NetworkService:
                 self.endpoint,
                 self.port,
                 self.user,
-                self.secret,
+                self.secret[-4:].rjust(len(self.secret), "*"),
             )
         )
         await controller.connect(
@@ -94,22 +93,85 @@ class NetworkService:
 
         return controller
 
-    async def disconnect(self, controller):
-        pass
+    def __del__(self):
+        self.logout()
+
+    async def disconnect(self):
+        """Disconnect from the Juju controller."""
+        if self.client:
+            log("Disconnecting Juju controller")
+            await self.client.disconnect()
 
     def login(self):
+        """Login to the Juju controller."""
         if not self.client:
             # Connect to the Juju API server
             self.client = self.loop.run_until_complete(self.connect())
         return self.client
 
     def logout(self):
+        """Logout of the Juju controller."""
+
         if self.loop:
             log("Disconnecting from API")
-            self.loop.run_until_complete(client.disconnect())
+            self.loop.run_until_complete(self.disconnect())
+
+    def FormatApplicationName(self, *args):
+        """
+        Generate a Juju-compatible Application name
+
+        :param args tuple: Positional arguments to be used to construct the
+        application name.
+
+        Limitations::
+        - Only accepts characters a-z and non-consequitive dashes (-)
+        - Application name should not exceed 50 characters
+
+        Examples::
+
+            FormatApplicationName("ping_pong_ns", "ping_vnf", "a")
+        """
+        appname = ""
+        for c in "-".join(list(args)):
+            if c.isdigit():
+                c = chr(97 + int(c))
+            elif not c.isalpha():
+                c = "-"
+            appname += c
+
+        return re.sub('-+', '-', appname.lower())
+
+    def GetApplicationName(self, nsr_name, vnf_name, vnf_member_index):
+        """Get the runtime application name of a VNF/VDU.
+
+        This will generate an application name matching the name of the deployed charm,
+        given the right parameters.
+
+        :param nsr_name str: The name of the running Network Service, as specified at instantiation.
+        :param vnf_name str: The name of the VNF or VDU
+        :param vnf_member_index: The vnf-member-index as specified in the descriptor
+        """
+
+        application_name = self.FormatApplicationName(nsr_name, vnf_member_index, vnf_name)
+
+        # This matches the logic used by the LCM
+        application_name = application_name[0:48]
+        vca_index = int(vnf_member_index) - 1
+        application_name += '-' + chr(97 + vca_index // 26) + chr(97 + vca_index % 26)
+
+        return application_name
 
     def ExecutePrimitiveGetOutput(self, application, primitive, params={}, timeout=600):
+        """Execute a single primitive and return it's output.
 
+        This is a blocking method that will execute a single primitive and wait
+        for its completion before return it's output.
+
+        :param application str: The application name provided by `GetApplicationName`.
+        :param primitive str: The name of the primitive to execute.
+        :param params list: A list of parameters.
+        :param timeout int: A timeout, in seconds, to wait for the primitive to finish. Defaults to 600 seconds.
+        """
         uuid = self.ExecutePrimitive(application, primitive, params)
 
         status = None
@@ -130,6 +192,10 @@ class NetworkService:
 
     def ExecutePrimitive(self, application, primitive, params={}):
         """Execute a primitive.
+
+        This is a non-blocking method to execute a primitive. It will return
+        the UUID of the queued primitive execution, which you can use
+        for subsequent calls to `GetPrimitiveStatus` and `GetPrimitiveOutput`.
 
         :param application string: The name of the application
         :param primitive string: The name of the Primitive.
@@ -158,7 +224,9 @@ class NetworkService:
                 )
                 uuid = action.id
                 log("Executing action: {}".format(uuid))
-
+            self.loop.run_until_complete(
+                model.disconnect()
+            )
         else:
             # Invalid mapping: application not found. Raise exception
             raise Exception("Application not found: {}".format(application))
@@ -167,6 +235,12 @@ class NetworkService:
 
     def GetPrimitiveStatus(self, uuid):
         """Get the status of a Primitive execution.
+
+        This will return one of the following strings:
+        - pending
+        - running
+        - completed
+        - failed
 
         :param uuid string: The UUID of the executed Primitive.
         :returns: The status of the executed Primitive
@@ -184,6 +258,10 @@ class NetworkService:
             model.get_action_status(uuid)
         )
 
+        self.loop.run_until_complete(
+            model.disconnect()
+        )
+
         return status[uuid]
 
     def GetPrimitiveOutput(self, uuid):
@@ -193,7 +271,7 @@ class NetworkService:
         :param uuid string: The UUID of the executed Primitive.
         :returns: The output of the execution, or None if it's still running.
         """
-        resulit = None
+        result = None
         if not self.client:
             self.login()
 
@@ -205,19 +283,8 @@ class NetworkService:
             model.get_action_output(uuid)
         )
 
+        self.loop.run_until_complete(
+            model.disconnect()
+        )
+
         return result
-
-    def GetApplications(self):
-        """Get a list of applications in the model.
-
-        :returns: A list of application names.
-        """
-        return []
-
-    def GetApplicationStatus(self, application):
-        """Get the status of an application.
-
-        :param application string: The name of the application
-        :returns: The status of the application.
-        """
-        return None

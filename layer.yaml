@@ -3,3 +3,4 @@ includes:
 options:
   basic:
     use_venv: false
+    packages: ['libssl-dev']
