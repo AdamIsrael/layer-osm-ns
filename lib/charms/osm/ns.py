@@ -2,7 +2,6 @@
 # OSM Network Service charms
 
 # This class handles the heavy lifting associated with asyncio.
-from charmhelpers.fetch.python.packages import pip_install
 from charmhelpers.core.hookenv import (
     log,
 )
@@ -10,7 +9,9 @@ from charmhelpers.core.hookenv import (
 try:
     import juju
 except ImportError:
-    pip_install(['juju'])
+    import subprocess
+    log('Installing juju')
+    subprocess.run(["pip3", "-qqq", "install", "juju"])
 
 import asyncio
 import logging
