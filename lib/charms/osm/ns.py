@@ -154,8 +154,9 @@ class NetworkService:
 
         # Get the NSR name from the Juju Unit name
         # i.e., JUJU_UNIT_NAME=testc-ac/0
+        # or JUJU_UNIT_NAME=asdf-asdf-ac/0 (a NS name with a hyphen)
         app = os.environ['JUJU_UNIT_NAME']
-        nsr_name = app[:app.index('-')]
+        nsr_name = app[:app.rindex('-')]
 
         application_name = self.FormatApplicationName(nsr_name, vnf_member_index, vnf_name)
 
