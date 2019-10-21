@@ -157,7 +157,7 @@ class NetworkService:
         app = os.environ['JUJU_UNIT_NAME']
         nsr_name = app[:app.index('-')]
 
-        application_name = self.FormatApplicationName(nsr_name, vnf_member_index)
+        application_name = self.FormatApplicationName(nsr_name, vnf_member_index, vnf_name)
 
         # This matches the logic used by the LCM
         application_name = application_name[0:48]
