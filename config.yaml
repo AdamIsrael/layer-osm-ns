@@ -7,3 +7,7 @@ options:
     type: string
     default: ""
     description: "The Juju password to authenticate with."
+  ns_config_info:
+    type: string
+    default: ""
+    description: "The NS_CONFIG_INFO containing the mapping of NS object to application names"
