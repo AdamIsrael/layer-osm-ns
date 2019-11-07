@@ -142,14 +142,14 @@ class NetworkService:
 
         return re.sub('-+', '-', appname.lower())
 
-    def GetApplicationName(self, vnf_name, vnf_member_index):
+    def GetApplicationName(self, vnf_member_index, vdu_id=None):
         """Get the runtime application name of a VNF/VDU.
 
         This will generate an application name matching the name of the deployed charm,
         given the right parameters.
 
-        :param vnf_name str: The name of the VNF or VDU
-        :param vnf_member_index: The vnf-member-index as specified in the descriptor
+        :param vnf_member_index str: The vnf-member-index of the VNF
+        :param vdu_id str: The vdu:id as specified in the descriptor
         """
 
         # Get the NSR name from the Juju Unit name
@@ -158,12 +158,13 @@ class NetworkService:
         app = os.environ['JUJU_UNIT_NAME']
         nsr_name = app[:app.rindex('-')]
 
-        application_name = self.FormatApplicationName(nsr_name, vnf_member_index, vnf_name)
+        vdu_id = (vdu_id if vdu_id else "") + "-"
+        application_name = self.FormatApplicationName(nsr_name, vnf_member_index, vdu_id)
 
         # This matches the logic used by the LCM
         application_name = application_name[0:48]
         vca_index = int(vnf_member_index) - 1
-        application_name += '-' + chr(97 + vca_index // 26) + chr(97 + vca_index % 26)
+        application_name += chr(97 + vca_index // 26) + chr(97 + vca_index % 26)
 
         return application_name
 
