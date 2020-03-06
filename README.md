@@ -8,7 +8,7 @@ This is an experimental feature, intended to land in OSM R6 later this spring.
 
 # Example(s)
 
-- An example [ns charm](https://github.com/AdamIsrael/layer-ns)
+- An example [ns charm](https://github.com/charmed-osm/layer-ns)
 
 
 # Contact Information
