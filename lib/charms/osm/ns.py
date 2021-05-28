@@ -11,6 +11,7 @@ try:
 except ImportError:
     import subprocess
     log('Installing juju')
+    subprocess.run(["pip3", "install", "--upgrade", "pip"])
     subprocess.run(["pip3", "-qqq", "install", "juju"])
 
 import asyncio
